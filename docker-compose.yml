@@ -1,0 +1,12 @@
+services:
+  cfd-surrogate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: perfectalone375/cfd-airfoil-surrogate:latest
+    container_name: cfd-surrogate-engine
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    environment:
+      - PYTHONUNBUFFERED=1
