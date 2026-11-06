@@ -6,6 +6,7 @@
 [![MCP Server](https://img.shields.io/badge/MCP-Protocol%202024--11--05-8A2BE2.svg)](https://modelcontextprotocol.io/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)](https://www.docker.com/)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Tests Passing](https://img.shields.io/badge/tests-18%20passed-brightgreen.svg)](tests/)
 
 High-fidelity, Physics-Informed Computational Fluid Dynamics (CFD) surrogate model providing **instantaneous (<2 ms) surface pressure distribution ($C_p$) and aerodynamic polar ($C_L, C_D, C_M, L/D$) predictions** across arbitrary subsonic flow conditions and NACA airfoil profiles.
 
