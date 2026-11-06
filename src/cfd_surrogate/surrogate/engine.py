@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..core.airfoil import generate_naca4
+from ..core.airfoil import generate_airfoil
 
 
 @dataclass
@@ -21,6 +21,8 @@ class SurrogatePrediction:
     cp_upper: list[float]
     cp_lower: list[float]
     x_coords: list[float]
+    xcp_over_c: float | None = None
+    cm_le: float = 0.0
 
 
 class AerodynamicSurrogateModel:
@@ -37,7 +39,7 @@ class AerodynamicSurrogateModel:
         reynolds: float = 1e6,
     ) -> SurrogatePrediction:
         """Predict instantaneous aerodynamic coefficients and surface Cp."""
-        geom = generate_naca4(airfoil_code, n_points=50)
+        geom = generate_airfoil(airfoil_code, n_points=50)
         m = geom.camber_max
         t = geom.thickness_max
 
@@ -62,6 +64,8 @@ class AerodynamicSurrogateModel:
 
         # Moment surrogate about quarter chord
         cm = float(-0.5 * np.pi * m)
+        cm_le = float(cm - 0.25 * cl)
+        xcp = round(0.25 - (cm / cl), 4) if abs(cl) > 1e-4 else None
         ld = cl / max(1e-5, cd)
 
         # Surface pressure coefficient distribution Cp(x)
@@ -86,4 +90,6 @@ class AerodynamicSurrogateModel:
             cp_upper=[round(v, 3) for v in cp_upper],
             cp_lower=[round(v, 3) for v in cp_lower],
             x_coords=[round(float(x), 3) for x in x_norm],
+            xcp_over_c=xcp,
+            cm_le=round(cm_le, 4),
         )
