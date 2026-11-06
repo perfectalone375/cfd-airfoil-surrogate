@@ -67,6 +67,8 @@ def handle_call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             "cl": pred.cl,
             "cd": pred.cd,
             "cm": pred.cm,
+            "cm_le": pred.cm_le,
+            "xcp_over_c": pred.xcp_over_c,
             "cl_over_cd": pred.cl_over_cd,
         }
     elif name == "cfd_generate_polar":
