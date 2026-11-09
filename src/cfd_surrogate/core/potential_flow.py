@@ -1,4 +1,5 @@
 """Lumped-vortex panel method solver for inviscid airfoil pressure distribution."""
+
 from __future__ import annotations
 
 import math

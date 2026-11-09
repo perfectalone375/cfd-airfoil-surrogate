@@ -1,4 +1,5 @@
 """Tests for NACA 5-digit airfoil generator and aerodynamic moment / center of pressure."""
+
 import pytest
 
 from cfd_surrogate.core.airfoil import generate_airfoil, generate_naca5
@@ -52,4 +53,3 @@ def test_symmetric_airfoil_moment():
     assert pred.cm == pytest.approx(0.0, abs=1e-3)
     # Center of pressure at quarter chord for symmetric airfoil in thin airfoil theory
     assert pred.xcp_over_c == pytest.approx(0.25, abs=0.01)
-

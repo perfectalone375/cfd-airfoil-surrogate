@@ -1,4 +1,5 @@
 """Aerodynamic polar curve integrator combining potential flow and boundary layer solvers."""
+
 from __future__ import annotations
 
 import math
@@ -82,11 +83,7 @@ def compute_polar(
         stall_angle = 14.5 + 20.0 * geom.camber_max
         if a > stall_angle:
             delta_a = a - stall_angle
-            cl_actual = (
-                p_res.cl_inviscid * 0.90
-                - 0.08 * (delta_a**1.3)
-                + 0.1 * math.sin(delta_a)
-            )
+            cl_actual = p_res.cl_inviscid * 0.90 - 0.08 * (delta_a**1.3) + 0.1 * math.sin(delta_a)
         elif a < -stall_angle:
             delta_a = abs(a) - stall_angle
             cl_actual = p_res.cl_inviscid * 0.90 + 0.08 * (delta_a**1.3)
