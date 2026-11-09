@@ -1,4 +1,5 @@
 """NACA 4-digit airfoil parametric geometry generator with cosine clustering."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -40,8 +41,8 @@ def generate_naca4(code: str, n_points: int = 100, chord: float = 1.0) -> Airfoi
         raise ValueError(f"Invalid NACA 4-digit code: '{code}'. Must be 4 digits (e.g., '2412').")
 
     m = int(code[0]) / 100.0  # Maximum camber
-    p = int(code[1]) / 10.0   # Position of maximum camber
-    t = int(code[2:]) / 100.0 # Maximum thickness ratio
+    p = int(code[1]) / 10.0  # Position of maximum camber
+    t = int(code[2:]) / 100.0  # Maximum thickness ratio
 
     # Cosine spacing for high leading edge resolution: theta in [0, pi]
     beta = np.linspace(0, np.pi, n_points)
@@ -49,9 +50,7 @@ def generate_naca4(code: str, n_points: int = 100, chord: float = 1.0) -> Airfoi
 
     # Thickness distribution y_t
     a0, a1, a2, a3, a4 = 0.2969, -0.1260, -0.3516, 0.2843, -0.1036
-    yt = (t / 0.2) * (
-        a0 * np.sqrt(x) + a1 * x + a2 * (x**2) + a3 * (x**3) + a4 * (x**4)
-    )
+    yt = (t / 0.2) * (a0 * np.sqrt(x) + a1 * x + a2 * (x**2) + a3 * (x**3) + a4 * (x**4))
 
     # Camber line y_c and slope theta
     yc = np.zeros_like(x)
@@ -64,9 +63,7 @@ def generate_naca4(code: str, n_points: int = 100, chord: float = 1.0) -> Airfoi
         yc[idx_front] = (m / (p**2)) * (2 * p * x[idx_front] - x[idx_front] ** 2)
         dyc_dx[idx_front] = (2 * m / (p**2)) * (p - x[idx_front])
 
-        yc[idx_back] = (m / ((1 - p) ** 2)) * (
-            (1 - 2 * p) + 2 * p * x[idx_back] - x[idx_back] ** 2
-        )
+        yc[idx_back] = (m / ((1 - p) ** 2)) * ((1 - 2 * p) + 2 * p * x[idx_back] - x[idx_back] ** 2)
         dyc_dx[idx_back] = (2 * m / ((1 - p) ** 2)) * (p - x[idx_back])
 
     theta = np.arctan(dyc_dx)
@@ -135,11 +132,23 @@ def generate_naca5(code: str, n_points: int = 100, chord: float = 1.0) -> Airfoi
     idx_front = x <= m_val
     idx_back = x > m_val
 
-    yc[idx_front] = (k1_val / 6.0) * (x[idx_front] ** 3 - 3 * m_val * (x[idx_front] ** 2) + (m_val**2) * (3 - m_val) * x[idx_front]) * scale
-    dyc_dx[idx_front] = (k1_val / 6.0) * (3 * (x[idx_front] ** 2) - 6 * m_val * x[idx_front] + (m_val**2) * (3 - m_val)) * scale
+    yc[idx_front] = (
+        (k1_val / 6.0)
+        * (
+            x[idx_front] ** 3
+            - 3 * m_val * (x[idx_front] ** 2)
+            + (m_val**2) * (3 - m_val) * x[idx_front]
+        )
+        * scale
+    )
+    dyc_dx[idx_front] = (
+        (k1_val / 6.0)
+        * (3 * (x[idx_front] ** 2) - 6 * m_val * x[idx_front] + (m_val**2) * (3 - m_val))
+        * scale
+    )
 
     yc[idx_back] = (k1_val * (m_val**3) / 6.0) * (1.0 - x[idx_back]) * scale
-    dyc_dx[idx_back] = - (k1_val * (m_val**3) / 6.0) * scale * np.ones_like(x[idx_back])
+    dyc_dx[idx_back] = -(k1_val * (m_val**3) / 6.0) * scale * np.ones_like(x[idx_back])
 
     theta = np.arctan(dyc_dx)
 
@@ -171,4 +180,3 @@ def generate_airfoil(code: str, n_points: int = 100, chord: float = 1.0) -> Airf
         return generate_naca5(clean_code, n_points=n_points, chord=chord)
     else:
         raise ValueError(f"Unsupported NACA airfoil code: '{code}'. Must be 4 or 5 digits.")
-

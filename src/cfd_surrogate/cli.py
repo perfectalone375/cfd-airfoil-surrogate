@@ -1,4 +1,5 @@
 """Command line interface for cfd-airfoil-surrogate (aeroml)."""
+
 from __future__ import annotations
 
 import argparse
@@ -62,13 +63,19 @@ def main() -> None:
         else:
             print("=" * 70)
             print(f"  Aerodynamic Polar: NACA {args.airfoil} (Re = {args.reynolds:.1e})")
-            print(f"  CL_max: {polar.cl_max:.3f} | CD_min: {polar.cd_min:.4f} | Max L/D: {polar.max_ld:.1f}")
+            print(
+                f"  CL_max: {polar.cl_max:.3f} | CD_min: {polar.cd_min:.4f} | Max L/D: {polar.max_ld:.1f}"
+            )
             print("-" * 70)
-            print(f"  {'Alpha (deg)':>12} | {'CL':>8} | {'CD':>8} | {'Cm':>8} | {'L/D':>8} | {'Stall':>6}")
+            print(
+                f"  {'Alpha (deg)':>12} | {'CL':>8} | {'CD':>8} | {'Cm':>8} | {'L/D':>8} | {'Stall':>6}"
+            )
             print("-" * 70)
             for p in polar.points:
                 stall_str = "YES" if p.separation else "no"
-                print(f"  {p.alpha_deg:12.1f} | {p.cl:8.4f} | {p.cd:8.5f} | {p.cm:8.4f} | {p.cl_over_cd:8.2f} | {stall_str:>6}")
+                print(
+                    f"  {p.alpha_deg:12.1f} | {p.cl:8.4f} | {p.cd:8.5f} | {p.cm:8.4f} | {p.cl_over_cd:8.2f} | {stall_str:>6}"
+                )
             print("=" * 70)
 
 

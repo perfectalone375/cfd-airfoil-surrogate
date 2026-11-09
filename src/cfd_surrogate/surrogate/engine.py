@@ -1,4 +1,5 @@
 """Physics-Informed Radial Basis Function (RBF) & polynomial aerodynamic surrogate engine."""
+
 from __future__ import annotations
 
 import math
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..core.airfoil import generate_airfoil
+from ..core.transonic import TransonicDragModel
 
 
 @dataclass
@@ -23,6 +25,9 @@ class SurrogatePrediction:
     x_coords: list[float]
     xcp_over_c: float | None = None
     cm_le: float = 0.0
+    cd_wave: float = 0.0
+    critical_mach: float = 0.75
+    drag_divergence_mach: float = 0.82
 
 
 class AerodynamicSurrogateModel:
@@ -37,6 +42,7 @@ class AerodynamicSurrogateModel:
         airfoil_code: str,
         alpha_deg: float,
         reynolds: float = 1e6,
+        mach: float = 0.20,
     ) -> SurrogatePrediction:
         """Predict instantaneous aerodynamic coefficients and surface Cp."""
         geom = generate_airfoil(airfoil_code, n_points=50)
@@ -60,13 +66,12 @@ class AerodynamicSurrogateModel:
         cf = 0.455 / ((math.log10(max(1e4, reynolds))) ** 2.58)
         cd0 = 2.0 * cf * (1.0 + 2.0 * t + 60.0 * (t**4))
         cd_induced = 0.0055 * (cl**2)
-        cd = float(cd0 + cd_induced)
+        cd_viscous = float(cd0 + cd_induced)
 
         # Moment surrogate about quarter chord
         cm = float(-0.5 * np.pi * m)
         cm_le = float(cm - 0.25 * cl)
         xcp = round(0.25 - (cm / cl), 4) if abs(cl) > 1e-4 else None
-        ld = cl / max(1e-5, cd)
 
         # Surface pressure coefficient distribution Cp(x)
         x_norm = np.linspace(0.01, 0.99, 50)
@@ -79,12 +84,25 @@ class AerodynamicSurrogateModel:
         cp_upper = (1.0 - (vt_upper**2)).tolist()
         cp_lower = (1.0 - (vt_lower**2)).tolist()
 
+        # Transonic drag rise and critical Mach modeling
+        cp0_min = min(min(cp_upper), min(cp_lower)) if cp_upper and cp_lower else -0.65
+        transonic_model = TransonicDragModel()
+        trans_res = transonic_model.evaluate(
+            mach_infinity=mach,
+            thickness_ratio=t,
+            cl=cl,
+            cp0_min=cp0_min,
+        )
+
+        cd = round(cd_viscous + trans_res.cd_wave, 5)
+        ld = cl / max(1e-5, cd)
+
         return SurrogatePrediction(
             airfoil=airfoil_code,
             alpha_deg=alpha_deg,
             reynolds=reynolds,
             cl=round(cl, 4),
-            cd=round(cd, 5),
+            cd=cd,
             cm=round(cm, 4),
             cl_over_cd=round(ld, 2),
             cp_upper=[round(v, 3) for v in cp_upper],
@@ -92,4 +110,7 @@ class AerodynamicSurrogateModel:
             x_coords=[round(float(x), 3) for x in x_norm],
             xcp_over_c=xcp,
             cm_le=round(cm_le, 4),
+            cd_wave=trans_res.cd_wave,
+            critical_mach=trans_res.critical_mach,
+            drag_divergence_mach=trans_res.drag_divergence_mach,
         )

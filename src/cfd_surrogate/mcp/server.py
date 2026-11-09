@@ -1,11 +1,14 @@
 """Model Context Protocol (MCP) Server for CFD Aerodynamic Surrogate Engine."""
+
 from __future__ import annotations
 
 import json
 import sys
 from typing import Any
 
+from ..core.airfoil import generate_airfoil
 from ..core.polar import compute_polar
+from ..core.transonic import TransonicDragModel
 from ..surrogate.engine import AerodynamicSurrogateModel
 
 TOOLS = [
@@ -15,11 +18,36 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "airfoil_code": {"type": "string", "description": "NACA 4-digit code, e.g. '0012', '2412', '4412'"},
+                "airfoil_code": {
+                    "type": "string",
+                    "description": "NACA 4-digit code, e.g. '0012', '2412', '4412'",
+                },
                 "alpha_deg": {"type": "number", "description": "Angle of attack in degrees"},
                 "reynolds": {"type": "number", "description": "Reynolds number (default 1e6)"},
+                "mach": {
+                    "type": "number",
+                    "description": "Flight Mach number (default 0.2)",
+                    "default": 0.2,
+                },
             },
             "required": ["airfoil_code", "alpha_deg"],
+        },
+    },
+    {
+        "name": "cfd_transonic_drag_divergence",
+        "description": "Evaluate transonic critical Mach number Mcrit, drag divergence Mach Mdd, and wave drag rise CD_wave.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "airfoil_code": {"type": "string", "description": "NACA 4-digit or 5-digit code"},
+                "mach": {"type": "number", "description": "Flight Mach number (e.g. 0.78)"},
+                "cl": {
+                    "type": "number",
+                    "description": "Design lift coefficient (default 0.4)",
+                    "default": 0.4,
+                },
+            },
+            "required": ["airfoil_code", "mach"],
         },
     },
     {
@@ -59,7 +87,8 @@ def handle_call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         code = args["airfoil_code"]
         alpha = float(args["alpha_deg"])
         reynolds = float(args.get("reynolds", 1e6))
-        pred = surrogate_instance.predict(code, alpha, reynolds)
+        mach = float(args.get("mach", 0.2))
+        pred = surrogate_instance.predict(code, alpha, reynolds, mach=mach)
         return {
             "airfoil": pred.airfoil,
             "alpha_deg": pred.alpha_deg,
@@ -70,6 +99,25 @@ def handle_call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             "cm_le": pred.cm_le,
             "xcp_over_c": pred.xcp_over_c,
             "cl_over_cd": pred.cl_over_cd,
+            "cd_wave": pred.cd_wave,
+            "critical_mach": pred.critical_mach,
+            "drag_divergence_mach": pred.drag_divergence_mach,
+        }
+    elif name == "cfd_transonic_drag_divergence":
+        code = args["airfoil_code"]
+        mach = float(args["mach"])
+        cl = float(args.get("cl", 0.4))
+        geom = generate_airfoil(code)
+        model = TransonicDragModel()
+        res = model.evaluate(mach_infinity=mach, thickness_ratio=geom.thickness_max, cl=cl)
+        return {
+            "airfoil": code,
+            "mach": res.mach_infinity,
+            "critical_mach": res.critical_mach,
+            "drag_divergence_mach": res.drag_divergence_mach,
+            "cd_wave": res.cd_wave,
+            "sonic_cp_star": res.sonic_cp_star,
+            "is_transonic_shock_present": res.is_transonic_shock_present,
         }
     elif name == "cfd_generate_polar":
         code = args["airfoil_code"]
@@ -77,7 +125,9 @@ def handle_call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         a_max = float(args.get("alpha_max", 16.0))
         step = float(args.get("step", 2.0))
         reynolds = float(args.get("reynolds", 1e6))
-        polar = compute_polar(code, alpha_min=a_min, alpha_max=a_max, alpha_step=step, reynolds=reynolds)
+        polar = compute_polar(
+            code, alpha_min=a_min, alpha_max=a_max, alpha_step=step, reynolds=reynolds
+        )
         return polar.to_dict()
     elif name == "cfd_pressure_distribution":
         code = args["airfoil_code"]
@@ -129,10 +179,18 @@ def main() -> None:
                     },
                 }
             else:
-                resp = {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32601, "message": f"Method {method} not found"}}
+                resp = {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32601, "message": f"Method {method} not found"},
+                }
             print(json.dumps(resp), flush=True)
         except Exception as err:
-            err_resp = {"jsonrpc": "2.0", "id": None, "error": {"code": -32000, "message": str(err)}}
+            err_resp = {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32000, "message": str(err)},
+            }
             print(json.dumps(err_resp), flush=True)
 
 
